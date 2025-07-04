@@ -4,21 +4,20 @@ I was adding Go's build cache into a persistant cache for CI and a colleague rea
 
 When reading `go help test` I saw that the tests will not cache if an environment variable used in the test has changed. So I wanted to understand how that happens, and what the scope of the cache was.
 
+Notably, the caching will only happen in "package list mode" which I know means `./...`, but what about a manual list of packages?
+
 My conclusion from the experiment and reading code:
 
 - Go runs tests per package, and packages in parallel, so if any test in the package relies on an environment variable and it changes, it invalidates the cache for all tests in that package
 - This does not extend to subpackages
 - If a library uses an environment variable and it's called through the test it's caught
   - This is not surprising because Go hooks into the `os.Getenv` call and logs each variable there, but I wanted it positively confirmed
+- A manual list of packages will also get cached
+  - `./` is cached and so is any number of packages
+- `go test` without arguments (no targeting) is never cached (implies current package)
+- `go test <file> [file...]` will also never get cached
 
-I made a script, [test.sh], that runs my test scenarios:
-- SETUP: empty logs and clear testcache
-
-The numbers below are the test runs:
-1. DRONE_COMMIT_SHA is empty: no cached packages
-2. DRONE_COMMIT_SHA is empty: 3 cached packages
-3. DRONE_COMMIT_SHA=1: 1 cached package that doesn't rely on the env var
-4. DRONE_COMMIT_SHA=1: 3 cached packages
+I made a script, [test.sh] which contains my 9 test scenarios.
 
 ---
 
