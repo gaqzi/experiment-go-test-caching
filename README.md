@@ -46,5 +46,20 @@ Raw notes of my research and how I ended up here:
                 - The module uses the env var but it's not immediately visible
         - I want to make a single script that runs these scenarios so I can validate that it works as expected
           - [test.sh]
+  - To determine if the test cache is valid it writes a Unixnano timestamp into `$GOCACHE/testexpire.txt` [source](https://github.com/golang/go/blob/665af869920432879629c1d64cf59f129942dcd6/src/cmd/go/internal/test/test.go#L844-L848)
+      - How long will it let the test be valid for when that's true? Because that means that any result baked into the container/cache is only cached for that long…
+          - They stay valid forever, [it only gets marked as invalid when the cache is cleaned](https://github.com/golang/go/blob/665af869920432879629c1d64cf59f129942dcd6/src/cmd/go/internal/clean/clean.go#L185-L214), which is an optimization made to avoid having to traverse all the cache files and figure out which ones are related to tests
+  - The cache is then tried at some point through [tryCache](https://github.com/golang/go/blob/6c3b5a2798c83d583cb37dba9f39c47300d19f1f/src/cmd/go/internal/test/test.go#L1741-L1746)
+      - validates that we're run in "package list mode"
+      - uses a `buildID` to determine if it's the same file as it was before, [which is defined as](https://github.com/golang/go/blob/8798f9e7a4929bafb570da29d342104c8cb32f9b/src/cmd/go/internal/work/buildid.go#L26-L31):
+          - ```go
+            // Go packages and binaries are stamped with build IDs that record both
+            // the action ID, which is a hash of the inputs to the action that produced
+            // the packages or binary, and the content ID, which is a hash of the action
+            // output, namely the archive or binary itself.
+            ```
+          - to see the hashes run `GODEBUG=gocachehash=1 go test ./...`, there are several `GODEBUG` related to caching and if you read the source you'll see that it's liberally logging when the variable is set. To see which variables exist and why run `go help cache`.
+      - Overall, I don't care, all I really wanted to know was how it did the work, which is through the testlog package -> hash those, and because we assume we'll need the same in subsequent runs we can't cache unless it's the same.
+          - Does that mean there's a potential edge-case where we used to call one env var and now start calling another one? No, because the file hash is different, so it would of course be invalidated. This is on top of the file content itself.
 
 [test.sh]: ./test.sh
