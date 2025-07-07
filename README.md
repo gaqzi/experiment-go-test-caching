@@ -1,6 +1,6 @@
 # An experiment to understand when Go will cache tests
 
-There's a [blog post explaining the context and a bit (hopefully) clearer writeup of this.](https://sanitarium.se/blog/2025/07/07/caching-go-on-ci-without-surprises/)
+There's a [blog post explaining the context and a bit (hopefully) clearer writeup of this.](https://sanitarium.se/blog/2025/07/07/caching-go-on-ci-without-surprises/?ref=experiment-repo)
 
 I was adding Go's build cache into a persistant cache for CI and a colleague realized we might get some false-positive tests for our black box integration tests because they don't "declare their dependencies" for the compiler, they run as network services, and we wanted  to understand how we could make our BB integration tests ensure they always get run and never get cached, due to it.
 
